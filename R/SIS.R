@@ -26,7 +26,6 @@
 #' @importFrom nnet multinom
 #' @import doParallel
 #' @importFrom foreach foreach
-#' @importFrom Coxnet Coxnet
 #'
 #' @param x The design matrix, of dimensions n * p, without an intercept. Each
 #' row is an observation vector.  \code{SIS} standardizes the data and includes
