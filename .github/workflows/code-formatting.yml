@@ -1,0 +1,39 @@
+name: Code Formatting Check
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  check-formatting:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up R
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: 'release'
+        
+    - name: Install styler
+      run: |
+        install.packages("styler", repos = "https://cloud.r-project.org")
+      shell: Rscript {0}
+      
+    - name: Check code formatting
+      run: |
+        result <- styler::style_dir('.', exclude_dirs = c('renv', 'output', 'inputData'))
+        if (any(result[['changed']])) {
+          cat("\n❌ Code is not properly formatted.\n")
+          cat("The following files need formatting:\n")
+          print(result[result$changed, ])
+          cat("\nRun styler::style_dir(\".\") locally and commit the changes.\n")
+          stop('Code is not properly formatted.')
+        } else {
+          cat("\n✅ All code is properly formatted!\n")
+        }
+      shell: Rscript {0}

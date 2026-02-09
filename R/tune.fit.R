@@ -95,14 +95,18 @@
 #' model$ix
 #' model$a0
 #' model$beta
-tune.fit <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox", "multinom"), penalty = c("SCAD", "MCP", "lasso", "aenet", "msaenet", "enet"), concavity.parameter = switch(penalty, SCAD = 3.7, 3), tune = c("cv", "aic", "bic", "ebic"), nfolds = 10,
-                     type.measure = c("deviance", "class", "auc", "mse", "mae"), gamma.ebic = 1, parallel=TRUE, seed=NULL) {
-  if(!is.null(seed)){
-    set.seed(seed, kind = "L'Ecuyer-CMRG")}
+tune.fit <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox", "multinom"), penalty = c("SCAD", "MCP", "lasso", "aenet", "msaenet", "enet"), concavity.parameter = switch(penalty,
+                       SCAD = 3.7,
+                       3
+                     ), tune = c("cv", "aic", "bic", "ebic"), nfolds = 10,
+                     type.measure = c("deviance", "class", "auc", "mse", "mae"), gamma.ebic = 1, parallel = TRUE, seed = NULL) {
+  if (!is.null(seed)) {
+    set.seed(seed, kind = "L'Ecuyer-CMRG")
+  }
   if (is.null(x) || is.null(y)) {
     stop("The data is missing!")
   }
-  
+
   this.call <- match.call()
   family <- match.arg(family)
   penalty <- match.arg(penalty)
@@ -114,113 +118,119 @@ tune.fit <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox", 
     stop("nfolds must be numeric!")
   }
   type.measure <- match.arg(type.measure)
-  
-  
+
+
   if (tune == "cv") {
-    
     if (penalty == "lasso") {
-      cv.fit <- cv.glmnet(x, y, family = family, type.measure = type.measure, nfolds = nfolds, parallel=parallel)
+      cv.fit <- cv.glmnet(x, y, family = family, type.measure = type.measure, nfolds = nfolds, parallel = parallel)
       coef.beta <- coef(cv.fit, s = "lambda.1se")
       reg.fit <- cv.fit$glmnet.fit
       lambda <- cv.fit$lambda.1se
       lambda.ind <- which(cv.fit$lambda == cv.fit$lambda.1se)
-      
-    } else if (penalty == "enet"){
-      cv.fit = cv.glmnet(x, y, family = family, alpha=0.05, type.measure = type.measure, nfolds = nfolds, parallel=parallel)
-      coef.beta = coef(cv.fit, s = "lambda.1se")
-      reg.fit = cv.fit$glmnet.fit
-      lambda = cv.fit$lambda.1se
-      lambda.ind = which(cv.fit$lambda == cv.fit$lambda.1se)
-      
+    } else if (penalty == "enet") {
+      cv.fit <- cv.glmnet(x, y, family = family, alpha = 0.05, type.measure = type.measure, nfolds = nfolds, parallel = parallel)
+      coef.beta <- coef(cv.fit, s = "lambda.1se")
+      reg.fit <- cv.fit$glmnet.fit
+      lambda <- cv.fit$lambda.1se
+      lambda.ind <- which(cv.fit$lambda == cv.fit$lambda.1se)
     } else if (penalty == "aenet" | penalty == "msaenet") {
-      enet <- cv.glmnet(x, y, alpha=0.05, family=family, type.measure = type.measure, nfolds=nfolds, parallel=parallel)
+      enet <- cv.glmnet(x, y, alpha = 0.05, family = family, type.measure = type.measure, nfolds = nfolds, parallel = parallel)
       lambda <- enet$lambda.1se
-      coef_init = coef.glmnet(enet, s = lambda)
-      if(any(row.names(coef_init)=='(Intercept)')){
-        pf=as.vector(pmax(abs(coef_init), .Machine$double.eps)^(-1))[-1]
-      } else{
-        pf=as.vector(pmax(abs(coef_init), .Machine$double.eps)^(-1))}
-      if (penalty == "aenet"){
-        if(family == 'cox'){
-          cv.fit = Coxnet(x, y, penalty = "Enet", alpha = 0.05, nlambda = 50, nfolds = 10,
-                          inzero = FALSE, adaptive = c(TRUE, FALSE), aini=list(wbeta=(pmax(abs(as.numeric(coef_init)), .Machine$double.eps))^(-1)))
-          coef.beta = as(as.matrix(cv.fit[['Beta']]), "dgCMatrix")
+      coef_init <- coef.glmnet(enet, s = lambda)
+      if (any(row.names(coef_init) == "(Intercept)")) {
+        pf <- as.vector(pmax(abs(coef_init), .Machine$double.eps)^(-1))[-1]
+      } else {
+        pf <- as.vector(pmax(abs(coef_init), .Machine$double.eps)^(-1))
+      }
+      if (penalty == "aenet") {
+        if (family == "cox") {
+          cv.fit <- Coxnet(x, y,
+            penalty = "Enet", alpha = 0.05, nlambda = 50, nfolds = 10,
+            inzero = FALSE, adaptive = c(TRUE, FALSE), aini = list(wbeta = (pmax(abs(as.numeric(coef_init)), .Machine$double.eps))^(-1))
+          )
+          coef.beta <- as(as.matrix(cv.fit[["Beta"]]), "dgCMatrix")
           rownames(coef.beta) <- colnames(x)
-          reg.fit = cv.fit[['fit']]
-          lambda = cv.fit[['lambda.max']]
+          reg.fit <- cv.fit[["fit"]]
+          lambda <- cv.fit[["lambda.max"]]
         } else {
-          if (family=='gaussian'){
-            gcd <- cv.gcdnet(x, y, nfolds=10, lambda2=0.95, standardize=TRUE, method='ls')
+          if (family == "gaussian") {
+            gcd <- cv.gcdnet(x, y, nfolds = 10, lambda2 = 0.95, standardize = TRUE, method = "ls")
             coef_init <- coef(gcd, s = "lambda.1se")
             lambda <- gcd$lambda.1se
-            if(any(row.names(coef_init)=='(Intercept)')){
-              pf=as.vector(pmax(abs(coef_init), .Machine$double.eps)^(-1))[-1]
-            } else{
-              pf=as.vector(pmax(abs(coef_init), .Machine$double.eps)^(-1))
+            if (any(row.names(coef_init) == "(Intercept)")) {
+              pf <- as.vector(pmax(abs(coef_init), .Machine$double.eps)^(-1))[-1]
+            } else {
+              pf <- as.vector(pmax(abs(coef_init), .Machine$double.eps)^(-1))
             }
-            fit_gcdnet <- gcdnet(x, y, lambda=lambda, lambda2=0.95, pf=pf, standardize=TRUE, method='ls')
+            fit_gcdnet <- gcdnet(x, y, lambda = lambda, lambda2 = 0.95, pf = pf, standardize = TRUE, method = "ls")
           } else {
-            gcd <- cv.gcdnet(x, y, nfolds=10, lambda2=0.95, standardize=TRUE)
+            gcd <- cv.gcdnet(x, y, nfolds = 10, lambda2 = 0.95, standardize = TRUE)
             coef_init <- coef(gcd, s = "lambda.1se")
-            lambda = gcd$lambda.1se
-            if(any(row.names(coef_init)=='(Intercept)')){
-              pf=as.vector(pmax(abs(coef_init), .Machine$double.eps)^(-1))[-1]
-            } else{
-              pf=as.vector(pmax(abs(coef_init), .Machine$double.eps)^(-1))
+            lambda <- gcd$lambda.1se
+            if (any(row.names(coef_init) == "(Intercept)")) {
+              pf <- as.vector(pmax(abs(coef_init), .Machine$double.eps)^(-1))[-1]
+            } else {
+              pf <- as.vector(pmax(abs(coef_init), .Machine$double.eps)^(-1))
             }
-            fit_gcdnet <- gcdnet(x, y, lambda=lambda, lambda2=0.95, pf=pf, standardize=TRUE)
+            fit_gcdnet <- gcdnet(x, y, lambda = lambda, lambda2 = 0.95, pf = pf, standardize = TRUE)
           }
-          coef.beta = coef(fit_gcdnet, s = "lambda.1se")
-          reg.fit = fit_gcdnet$gcdnet.fit
-          lambda = fit_gcdnet$lambda.1se
+          coef.beta <- coef(fit_gcdnet, s = "lambda.1se")
+          reg.fit <- fit_gcdnet$gcdnet.fit
+          lambda <- fit_gcdnet$lambda.1se
         }
-      } else if(penalty == 'msaenet'){
-        cv.fit = aenet(x, y, family = family, init = "ridge", alphas = 0.05, penalty.factor.init=pf,
-                       rule = "lambda.1se", parallel = parallel, verbose = TRUE)
-        coef.beta = cv.fit[['beta']]
-        reg.fit = cv.fit[['model']]
-        lambda =cv.fit[['best.lambda.aenet']]
-        
-        # SCAD and MCP penalties    
-      }} else if (family != 'cox'){
-        cv.fit <- cv.ncvreg(x, y, family = family, penalty = penalty, gamma = concavity.parameter, nfolds = nfolds)
-        cv.1se.ind <- min(which(cv.fit$cve < cv.fit$cve[cv.fit$min] + cv.fit$cvse[cv.fit$min]))
-        coef.beta <- cv.fit$fit$beta[, cv.1se.ind] # extract coefficients at a single value of lambda, including the intercept
-        reg.fit <- cv.fit$fit
-        
-        lambda <- cv.fit$lambda[cv.1se.ind]
-        lambda.ind <- cv.1se.ind
-      } else {
-        cv.fit <- cv.ncvsurv(x, y, family = family, penalty = penalty, gamma = concavity.parameter, nfolds = nfolds)
-        cv.1se.ind <- min(which(cv.fit$cve < cv.fit$cve[cv.fit$min] + cv.fit$cvse[cv.fit$min]))
-        coef.beta <- cv.fit$fit$beta[, cv.1se.ind] # extract coefficients at a single value of lambda
-        reg.fit <- cv.fit$fit
-        
-        lambda <- cv.fit$lambda[cv.1se.ind]
-        lambda.ind <- cv.1se.ind
+      } else if (penalty == "msaenet") {
+        cv.fit <- aenet(x, y,
+          family = family, init = "ridge", alphas = 0.05, penalty.factor.init = pf,
+          rule = "lambda.1se", parallel = parallel, verbose = TRUE
+        )
+        coef.beta <- cv.fit[["beta"]]
+        reg.fit <- cv.fit[["model"]]
+        lambda <- cv.fit[["best.lambda.aenet"]]
+
+        # SCAD and MCP penalties
       }
+    } else if (family != "cox") {
+      cv.fit <- cv.ncvreg(x, y, family = family, penalty = penalty, gamma = concavity.parameter, nfolds = nfolds)
+      cv.1se.ind <- min(which(cv.fit$cve < cv.fit$cve[cv.fit$min] + cv.fit$cvse[cv.fit$min]))
+      coef.beta <- cv.fit$fit$beta[, cv.1se.ind] # extract coefficients at a single value of lambda, including the intercept
+      reg.fit <- cv.fit$fit
+
+      lambda <- cv.fit$lambda[cv.1se.ind]
+      lambda.ind <- cv.1se.ind
+    } else {
+      cv.fit <- cv.ncvsurv(x, y, family = family, penalty = penalty, gamma = concavity.parameter, nfolds = nfolds)
+      cv.1se.ind <- min(which(cv.fit$cve < cv.fit$cve[cv.fit$min] + cv.fit$cvse[cv.fit$min]))
+      coef.beta <- cv.fit$fit$beta[, cv.1se.ind] # extract coefficients at a single value of lambda
+      reg.fit <- cv.fit$fit
+
+      lambda <- cv.fit$lambda[cv.1se.ind]
+      lambda.ind <- cv.1se.ind
+    }
   } else {
     n <- nrow(x)
     if (penalty == "lasso") {
       reg.fit <- glmnet(x, y, family = family)
-      if(family != 'multinom'){
+      if (family != "multinom") {
         coef.beta <- rbind(reg.fit$a0, as.matrix(reg.fit$beta)) # extract coefficients at all values of lambda,  including the intercept
-      } else{
-        coef.beta = lapply(1:length(reg.fit$beta), f<-function(i){rbind(reg.fit$a0[i,], as.matrix(reg.fit$beta[[i]]))} )
+      } else {
+        coef.beta <- lapply(1:length(reg.fit$beta), f <- function(i) {
+          rbind(reg.fit$a0[i, ], as.matrix(reg.fit$beta[[i]]))
+        })
       }
       dev <- deviance(reg.fit)
       reg.df <- reg.fit$df
-    } else if (penalty == "enet"){
-      reg.fit <- glmnet(x, y, family = family, alpha=0.05)
-      if(family != 'multinom'){
+    } else if (penalty == "enet") {
+      reg.fit <- glmnet(x, y, family = family, alpha = 0.05)
+      if (family != "multinom") {
         coef.beta <- rbind(reg.fit$a0, as.matrix(reg.fit$beta)) # extract coefficients at all values of lambda,  including the intercept
-      } else{
-        coef.beta = lapply(1:length(reg.fit$beta), f<-function(i){rbind(reg.fit$a0[i,], as.matrix(reg.fit$beta[[i]]))} )
+      } else {
+        coef.beta <- lapply(1:length(reg.fit$beta), f <- function(i) {
+          rbind(reg.fit$a0[i, ], as.matrix(reg.fit$beta[[i]]))
+        })
       }
       dev <- deviance(reg.fit)
       reg.df <- reg.fit$df
-    }
-    else {
+    } else {
       if (family != "cox") {
         reg.fit <- ncvreg(x, y, family = family, penalty = penalty, gamma = concavity.parameter)
         coef.beta <- reg.fit$beta # extract coefficients at all values of lambda, including the intercept
@@ -233,7 +243,7 @@ tune.fit <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox", 
         reg.df <- getdf(coef.beta)
       }
     }
-    
+
     if (tune == "aic") {
       obj <- dev + 2 * reg.df
     }
@@ -244,18 +254,20 @@ tune.fit <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox", 
       obj <- dev + log(n) * reg.df + 2 * gamma.ebic * log(choose(dim(x)[2], reg.df))
     }
     lambda.ind <- which.min(obj)
-    if(family != 'multinom'){
-      coef.beta <- coef.beta[, lambda.ind]  
-    } else{
-      coef.beta = sapply(1:length(coef.beta), f<-function(i){coef.beta[[i]][, lambda.ind]} )
+    if (family != "multinom") {
+      coef.beta <- coef.beta[, lambda.ind]
+    } else {
+      coef.beta <- sapply(1:length(coef.beta), f <- function(i) {
+        coef.beta[[i]][, lambda.ind]
+      })
     }
     lambda <- reg.fit$lambda[lambda.ind]
   }
-  if (family == 'multinom'){
-    a0 <- coef.beta[1,]
-    coef.beta <- coef.beta[-1,]  
-    ix <- which(apply(abs(coef.beta),1,sum) != 0)
-    beta <- coef.beta[ix,]
+  if (family == "multinom") {
+    a0 <- coef.beta[1, ]
+    coef.beta <- coef.beta[-1, ]
+    ix <- which(apply(abs(coef.beta), 1, sum) != 0)
+    beta <- coef.beta[ix, ]
   } else if (family != "cox") {
     a0 <- coef.beta[1]
     coef.beta <- coef.beta[-1]
@@ -267,6 +279,6 @@ tune.fit <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox", 
     ix <- which(coef.beta != 0)
     beta <- coef.beta[ix]
   }
-  
+
   return(list(ix = ix, a0 = a0, beta = beta, fit = reg.fit, lambda = lambda))
 }

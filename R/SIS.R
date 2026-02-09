@@ -33,12 +33,12 @@
 #' @param y The response vector of dimension n * 1. Quantitative for
 #' \code{family='gaussian'}, non-negative counts for \code{family='poisson'},
 #' binary (0-1) for \code{family='binomial'}, factor for \code{family='multinom'}.
-#' For \code{family='cox'}, \code{y} should be an object of class \code{Surv}, 
+#' For \code{family='cox'}, \code{y} should be an object of class \code{Surv},
 #' as provided by the function \code{Surv()} in the package \pkg{survival}.
 #' @param family Response type (see above).
 #' @param penalty The penalty to be applied in the regularized likelihood
 #' subproblems. 'SCAD', 'MCP', or 'lasso' are provided. 'lasso' is the default
-#' for family = 'multinom' or 'cox', 'SCAD' is the default for other families. 
+#' for family = 'multinom' or 'cox', 'SCAD' is the default for other families.
 #' @param concavity.parameter The tuning parameter used to adjust the concavity
 #' of the SCAD/MCP penalty. Default is 3.7 for SCAD and 3 for MCP.
 #' @param tune Method for tuning the regularization parameter of the penalized
@@ -104,24 +104,24 @@
 #' @param parallel Specifies whether to conduct parallel computing
 #' @return Returns an object with \itemize{
 #' \item{sis.ix0}{The vector of indices selected by
-#' only SIS.} 
+#' only SIS.}
 #' \item{ix}{ The vector of indices selected by
-#' (I)SIS with regularization step.} 
-#' \item{coef.est}{The vector of coefficients of the final model selected by (I)SIS.} 
+#' (I)SIS with regularization step.}
+#' \item{coef.est}{The vector of coefficients of the final model selected by (I)SIS.}
 #' \item{fit}{A fitted object of type \code{ncvreg},
 #' \code{cv.ncvreg}, \code{glmnet}, or \code{cv.glmnet} for the final model selected by the (I)SIS procedure. If \code{tune='cv'}, the returned fitted object is of type \code{cv.ncvreg} if \code{penalty='SCAD'} or
 #' \code{penalty='MCP'}; otherwise, the returned fitted object is of type
 #' \code{cv.glmnet}. For the remaining options of \code{tune}, the returned
 #' object is of type \code{glmnet} if \code{penalty='lasso'}, and \code{ncvreg}
-#' otherwise.  } 
+#' otherwise.  }
 #' \item{path.index}{ The index along the solution path of
 #' \code{fit} for which the criterion specified in \code{tune} is minimized.  }
 #' \item{ix0}{The vector of indices ordering by decreasing importance.}
 #' \item{ix_list}{The list of vectors of indices ordering by decreasing importance, for each screening step.}
-#' \item{cis}{Data frame with effect estimates: \itemize{ 
-#' \item{coef}{Coefficient} 
+#' \item{cis}{Data frame with effect estimates: \itemize{
+#' \item{coef}{Coefficient}
 #' \item{CI_low}{Lower confidence interval of the coefficient}
-#' \item{CI_up}{Upper confidence interval of the coefficient} 
+#' \item{CI_up}{Upper confidence interval of the coefficient}
 #' \item{Est}{Effect estimate (mean difference for Gaussian family, hazard ratio for Cox
 #' family and odds ratio for binomial family) when comparing the two specified quantiles in \code{probs}}
 #' \item{CI_low_perc}{Lower confidence interval of the effect estimate when comparing the quantiles specified in \code{probs}}
@@ -177,13 +177,13 @@
 #' cholmat <- chol(corrmat)
 #' x <- matrix(rnorm(n * p, mean = 0, sd = 1), n, p)
 #' x <- x %*% cholmat
-#' 
+#'
 #' # gaussian response
 #' set.seed(1)
 #' b <- c(4, 4, 4, -6 * sqrt(2), 4 / 3)
 #' y <- x[, 1:5] %*% b + rnorm(n)
-#' 
-#' 
+#'
+#'
 #' # SIS without regularization
 #' model10 <- SIS(x, y, family = "gaussian", iter = FALSE)
 #' model10$sis.ix0
@@ -245,19 +245,23 @@
 #' )
 #' model41$ix
 #' model42$ix
-#' 
-#' # SIS with bootstrap confidence intervals
-#' sis <- SIS(x, y, family = "cox", penalty='aenet', tune='cv', varISIS='cons',
-#' seed = 41, boot_ci=TRUE)
-#' sis$cis
-#'}
 #'
-
+#' # SIS with bootstrap confidence intervals
+#' sis <- SIS(x, y,
+#'   family = "cox", penalty = "aenet", tune = "cv", varISIS = "cons",
+#'   seed = 41, boot_ci = TRUE
+#' )
+#' sis$cis
+#' }
+#'
 SIS <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox", "multinom"), penalty = c("SCAD", "MCP", "lasso", "enet", "aenet", "msaenet"),
-                      concavity.parameter = switch(penalty, SCAD = 3.7, 3), tune = c("bic", "ebic", "aic", "cv"), nfolds = 10,
-                      type.measure = c("deviance", "class", "auc", "mse", "mae"), gamma.ebic = 1, nsis = NULL, iter = TRUE, iter.max = ifelse(greedy ==
-                                                                                                                                                FALSE, 10, floor(nrow(x) / log(nrow(x)))), varISIS = c("vanilla", "aggr", "cons"), perm = FALSE, q = 1,
-                      greedy = FALSE, greedy.size = 1, seed = NULL, standardize = TRUE, covars=NULL, probs=c(0.1,0.9), boot_ci = FALSE, parallel=TRUE) {
+                concavity.parameter = switch(penalty,
+                  SCAD = 3.7,
+                  3
+                ), tune = c("bic", "ebic", "aic", "cv"), nfolds = 10,
+                type.measure = c("deviance", "class", "auc", "mse", "mae"), gamma.ebic = 1, nsis = NULL, iter = TRUE, iter.max = ifelse(greedy ==
+                  FALSE, 10, floor(nrow(x) / log(nrow(x)))), varISIS = c("vanilla", "aggr", "cons"), perm = FALSE, q = 1,
+                greedy = FALSE, greedy.size = 1, seed = NULL, standardize = TRUE, covars = NULL, probs = c(0.1, 0.9), boot_ci = FALSE, parallel = TRUE) {
   this.call <- match.call()
   family <- match.arg(family)
   penalty <- match.arg(penalty)
@@ -265,7 +269,7 @@ SIS <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox", "mult
   type.measure <- match.arg(type.measure)
   varISIS <- match.arg(varISIS)
   set.seed(seed)
-  
+
   if (is.null(x) || is.null(y)) {
     stop("The data is missing!")
   }
@@ -278,8 +282,8 @@ SIS <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox", "mult
   if (!is.null(seed) & class(seed) != "numeric") {
     stop("seed must be numeric!")
   }
-  if (family == 'multinom' | is.null(penalty)){
-    penalty = 'lasso'
+  if (family == "multinom" | is.null(penalty)) {
+    penalty <- "lasso"
   }
   if (tune != "cv" && penalty %in% c("aenet", "msaenet")) {
     stop("Model currently not implemented with selected tuning option")
@@ -290,37 +294,40 @@ SIS <- function(x, y, family = c("gaussian", "binomial", "poisson", "cox", "mult
   if (type.measure %in% c("class", "auc") && family %in% c("gaussian", "poisson", "cox")) {
     stop("'class' and 'auc' type measures are only available for logistic regression")
   }
-  
+
   if (type.measure %in% c("class", "auc", "mse", "mae") && penalty %in% c("SCAD", "MCP")) {
     stop("Only 'deviance' is available as type.measure for non-convex penalties")
   }
-  if (is.null(colnames(x))){
-    colnames(x) <- unlist(lapply(seq(1:dim(x)[2]), function(y) paste0('V',y)))
-    
+  if (is.null(colnames(x))) {
+    colnames(x) <- unlist(lapply(seq(1:dim(x)[2]), function(y) paste0("V", y)))
   }
-  
-  fit <- switch(family, gaussian = sisglm(
-    x, y, "gaussian", penalty, concavity.parameter, tune,
-    nfolds, type.measure, gamma.ebic, nsis, iter, iter.max, varISIS, perm, q, greedy, greedy.size, seed,
-    standardize, boot_ci, covars, probs, parallel
-  ),
-  binomial = sisglm(
-    x, y, "binomial", penalty, concavity.parameter, tune,
-    nfolds, type.measure, gamma.ebic, nsis, iter, iter.max, varISIS, perm, q, greedy, greedy.size, seed,
-    standardize, boot_ci, covars, probs, parallel
-  ), poisson = sisglm(
-    x, y, "poisson", penalty, concavity.parameter, tune,
-    nfolds, type.measure, gamma.ebic, nsis, iter, iter.max, varISIS, perm, q, greedy, greedy.size, seed,
-    standardize, boot_ci, covars, probs, parallel
-  ), cox = sisglm(
-    x, y, "cox", penalty, concavity.parameter, tune,
-    nfolds, type.measure, gamma.ebic, nsis, iter, iter.max, varISIS, perm, q, greedy, greedy.size, seed,
-    standardize, boot_ci, covars, probs, parallel
-  ), multinom = sisglm(
-    x, y, "multinom", penalty, concavity.parameter, tune,
-    nfolds, type.measure, gamma.ebic, nsis, iter, iter.max, varISIS, perm, q, greedy, greedy.size, seed,
-    standardize, boot_ci, covars, probs, parallel
-  )
+
+  fit <- switch(family,
+    gaussian = sisglm(
+      x, y, "gaussian", penalty, concavity.parameter, tune,
+      nfolds, type.measure, gamma.ebic, nsis, iter, iter.max, varISIS, perm, q, greedy, greedy.size, seed,
+      standardize, boot_ci, covars, probs, parallel
+    ),
+    binomial = sisglm(
+      x, y, "binomial", penalty, concavity.parameter, tune,
+      nfolds, type.measure, gamma.ebic, nsis, iter, iter.max, varISIS, perm, q, greedy, greedy.size, seed,
+      standardize, boot_ci, covars, probs, parallel
+    ),
+    poisson = sisglm(
+      x, y, "poisson", penalty, concavity.parameter, tune,
+      nfolds, type.measure, gamma.ebic, nsis, iter, iter.max, varISIS, perm, q, greedy, greedy.size, seed,
+      standardize, boot_ci, covars, probs, parallel
+    ),
+    cox = sisglm(
+      x, y, "cox", penalty, concavity.parameter, tune,
+      nfolds, type.measure, gamma.ebic, nsis, iter, iter.max, varISIS, perm, q, greedy, greedy.size, seed,
+      standardize, boot_ci, covars, probs, parallel
+    ),
+    multinom = sisglm(
+      x, y, "multinom", penalty, concavity.parameter, tune,
+      nfolds, type.measure, gamma.ebic, nsis, iter, iter.max, varISIS, perm, q, greedy, greedy.size, seed,
+      standardize, boot_ci, covars, probs, parallel
+    )
   )
   fit$call <- this.call
   class(fit) <- c(class(fit), "SIS")
@@ -350,7 +357,7 @@ sisglm <- function(x, y, family, penalty, concavity.parameter, tune, nfolds, typ
   }
   ix_list <- NULL
   iterind <- 0
-  
+
   if (iter == TRUE) {
     ix0_list <- obtain.ix0(
       x = x, y = y, s1 = s1, s2 = s2, family = family, nsis = nsis, iter = iter, varISIS = varISIS,
@@ -367,11 +374,11 @@ sisglm <- function(x, y, family, penalty, concavity.parameter, tune, nfolds, typ
         ix0 <- c(ix0, p + 1 - ix0)
       }
       pen.ind <- ix0
-      
+
       selection.fit <- tune.fit(old.x[, ix0, drop = FALSE], y, family, penalty, concavity.parameter, tune, nfolds, type.measure, gamma.ebic, parallel, seed)
       coef.beta <- selection.fit$beta
       a0 <- selection.fit$a0
-      
+
       lambda <- selection.fit$lambda
       lambda.ind <- selection.fit$lambda.ind
       ix1 <- ix0[selection.fit$ix]
@@ -387,12 +394,13 @@ sisglm <- function(x, y, family, penalty, concavity.parameter, tune, nfolds, typ
         } else {
           return(sisglm(
             old.x, y, family, penalty, concavity.parameter, tune, nfolds, type.measure, gamma.ebic,
-            nsis, iter, iter.max, varISIS, perm, q, greedy, greedy.size, seed, standardize, boot_ci, covars, parallel, s1 = s1, s2 = s2, split.tries
+            nsis, iter, iter.max, varISIS, perm, q, greedy, greedy.size, seed, standardize, boot_ci, covars, parallel,
+            s1 = s1, s2 = s2, split.tries
           ))
         }
       }
-      
-      
+
+
       cat("Iter", iterind, ", selection: ", ix1, "\n")
       if (length(ix1) >= nsis || iterind >= iter.max) {
         ix0 <- ix1
@@ -404,7 +412,7 @@ sisglm <- function(x, y, family, penalty, concavity.parameter, tune, nfolds, typ
         }
         break
       }
-      
+
       models[[iterind]] <- ix1
       flag.models <- 0
       if (iterind > 1) {
@@ -418,7 +426,7 @@ sisglm <- function(x, y, family, penalty, concavity.parameter, tune, nfolds, typ
         cat("Model already selected \n")
         break
       }
-      
+
       candind <- setdiff(1:p, ix1)
       pleft <- nsis - length(ix1)
       newix_list <- obtain.newix(
@@ -458,9 +466,8 @@ sisglm <- function(x, y, family, penalty, concavity.parameter, tune, nfolds, typ
     lambda.ind <- selection.fit$lambda.ind
     ix1 <- ix0[selection.fit$ix]
   }
-  
-  
-  
+
+
   if (family == "cox") {
     if (length(ix1) > 0) {
       names(coef.beta) <- paste("X", ix1, sep = "")
@@ -471,11 +478,11 @@ sisglm <- function(x, y, family, penalty, concavity.parameter, tune, nfolds, typ
       names(coef.beta) <- c("(Intercept)", paste("X", ix1, sep = ""))
     }
   }
-  
-  if (boot_ci == TRUE){
-    cis <- boot_sis(x=old.x[,ix1], y=y, family=family, penalty=penalty, covars=covars, probs=probs, parallel=parallel)
-    return(list(sis.ix0 = sis.ix0, ix = ix1, coef.est = coef.beta, fit = selection.fit$fit, lambda = lambda, ix0 = pen.ind, ix_list = ix_list, cis=cis))
-  } else{
+
+  if (boot_ci == TRUE) {
+    cis <- boot_sis(x = old.x[, ix1], y = y, family = family, penalty = penalty, covars = covars, probs = probs, parallel = parallel)
+    return(list(sis.ix0 = sis.ix0, ix = ix1, coef.est = coef.beta, fit = selection.fit$fit, lambda = lambda, ix0 = pen.ind, ix_list = ix_list, cis = cis))
+  } else {
     return(list(sis.ix0 = sis.ix0, ix = ix1, coef.est = coef.beta, fit = selection.fit$fit, lambda = lambda, ix0 = pen.ind, ix_list = ix_list))
   }
 }

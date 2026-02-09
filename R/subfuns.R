@@ -34,7 +34,7 @@ margcoef <- function(x, y, condind = NULL, family, null.model = FALSE, iterind) 
   if (iterind == 0) {
     if (family == "cox") {
       margcoef <- abs(cor(x, y[, 1]))
-    } else if(family == 'multinom'){
+    } else if (family == "multinom") {
       margcoef <- sapply(candind, mg, x, y, ones, family, NULL)
     } else {
       margcoef <- abs(cor(x, y))
@@ -59,7 +59,7 @@ mg <- function(index, x = x, y = y, ones = ones, family = family, condind = cond
     binomial = glm.fit(cbind(ones, x[, index], x[, condind]), y, family = binomial())$deviance,
     poisson = glm.fit(cbind(ones, x[, index], x[, condind]), y, family = poisson())$deviance,
     cox = -coxph(y ~ cbind(x[, index], x[, condind]))$loglik[2],
-    multinom = multinom(y ~ cbind(x[, index], x[, condind]),trace = FALSE)$deviance
+    multinom = multinom(y ~ cbind(x[, index], x[, condind]), trace = FALSE)$deviance
   )
 }
 
@@ -281,7 +281,7 @@ calculate.nsis <- function(family, varISIS, n, p) {
     if (family == "gaussian") {
       nsis <- floor(n / log(n))
     }
-    if (family == "binomial" | family == 'multinom') {
+    if (family == "binomial" | family == "multinom") {
       nsis <- floor(n / (4 * log(n)))
     }
     if (family == "poisson") {

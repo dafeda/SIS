@@ -19,7 +19,7 @@
 #' Ultrahigh Dimensional Statistical Models, \emph{Journal of Statistical Software}, \bold{83}, 2, 1-25.
 #' @keywords models
 #' @examples
-#'\dontrun{
+#' \dontrun{
 #' set.seed(0)
 #' n <- 400
 #' p <- 50

@@ -1,5 +1,5 @@
-#' Calculates confidence intervals by using the quantile bootstrap approach. 
-#' 
+#' Calculates confidence intervals by using the quantile bootstrap approach.
+#'
 #' The algorithm first conducts 10 repetitions of a 200 iterations
 #' bootstrap. Then, it checks whether the standard error of the mean of those 10 estimations for both upper and lower confidence intervals is
 #' lower than the 5 % of the length of the interval for each variable. If this condition is met for more than 95 % of the variables,
@@ -34,7 +34,7 @@
 #' @param probs Quantiles to compare for the effect estimation. By default quantiles are 10th and 90th
 #' @param parallel Specifies whether to conduct parallel computing. If TRUE, it uses the parameter \code{parallel} from the \pkg{glmnet} package
 #' to parallelize the computation
-#' @return Returns an object with 
+#' @return Returns an object with
 #' \itemize{
 #' \item{coef}{Coefficient}
 #' \item{CI_low}{Lower confidence interval of the coefficient}
@@ -68,183 +68,196 @@
 #' Model Selection with Large Model Spaces. \emph{Biometrika}, \bold{95},
 #' 759-771.
 
-boot_sis <- function(x, y, family, penalty, sig=0.05, covars, probs=c(0.1,0.9), parallel=TRUE) {
-  if (penalty=='lasso'){
-    fit <- cv.glmnet(x, y, family=family, parallel=parallel)
-    lambda <- fit$lambda.1se
-    coef = coef(fit, s = lambda) 
-  } else if (penalty=='enet' | penalty=='msaenet' | penalty=='aenet'){
-    fit <- cv.glmnet(x, y, alpha=0.05, family=family, parallel=parallel)
+boot_sis <- function(x, y, family, penalty, sig = 0.05, covars, probs = c(0.1, 0.9), parallel = TRUE) {
+  if (penalty == "lasso") {
+    fit <- cv.glmnet(x, y, family = family, parallel = parallel)
     lambda <- fit$lambda.1se
     coef <- coef(fit, s = lambda)
-    if(any(row.names(coef)=='(Intercept)')){
-      coef.aenet <- coef(fit, s = lambda)[-1,1]
-    } else{
-      coef.aenet <- coef(fit, s = lambda)[,1]
+  } else if (penalty == "enet" | penalty == "msaenet" | penalty == "aenet") {
+    fit <- cv.glmnet(x, y, alpha = 0.05, family = family, parallel = parallel)
+    lambda <- fit$lambda.1se
+    coef <- coef(fit, s = lambda)
+    if (any(row.names(coef) == "(Intercept)")) {
+      coef.aenet <- coef(fit, s = lambda)[-1, 1]
+    } else {
+      coef.aenet <- coef(fit, s = lambda)[, 1]
     }
-    
-    if (penalty=='msaenet'){
-      fit_aenet <- aenet(x, y, family = family, init = "ridge", alphas = 0.05,
-                         rule = "lambda.1se", parallel = parallel, verbose = TRUE, penalty.factor.init=(pmax(abs(coef.aenet), .Machine$double.eps))^(-1))
+
+    if (penalty == "msaenet") {
+      fit_aenet <- aenet(x, y,
+        family = family, init = "ridge", alphas = 0.05,
+        rule = "lambda.1se", parallel = parallel, verbose = TRUE, penalty.factor.init = (pmax(abs(coef.aenet), .Machine$double.eps))^(-1)
+      )
       coef <- data.frame(coef(fit_aenet))
       row.names(coef) <- colnames(x)
-    } else if (penalty=='aenet'){
-      if (family=='cox'){
-        fit = Coxnet(x, y, penalty = "Enet", alpha = 0.05, nlambda = 50, nfolds = 10,
-                     inzero = FALSE, adaptive = c(TRUE, FALSE), aini=list(wbeta=(pmax(abs(as.numeric(coef.aenet)), .Machine$double.eps))^(-1)))
-        coef = as(as.matrix(fit[['Beta']]), "dgCMatrix")
+    } else if (penalty == "aenet") {
+      if (family == "cox") {
+        fit <- Coxnet(x, y,
+          penalty = "Enet", alpha = 0.05, nlambda = 50, nfolds = 10,
+          inzero = FALSE, adaptive = c(TRUE, FALSE), aini = list(wbeta = (pmax(abs(as.numeric(coef.aenet)), .Machine$double.eps))^(-1))
+        )
+        coef <- as(as.matrix(fit[["Beta"]]), "dgCMatrix")
         row.names(coef) <- colnames(x)
-        lambda = fit[['lambda.max']]
+        lambda <- fit[["lambda.max"]]
       } else {
-        if (family=='gaussian'){
-          fit_gcdnet <- cv.gcdnet(x, y, nfolds=10, lambda2=0.95, standardize=TRUE, method='ls')
+        if (family == "gaussian") {
+          fit_gcdnet <- cv.gcdnet(x, y, nfolds = 10, lambda2 = 0.95, standardize = TRUE, method = "ls")
         } else {
-          fit_gcdnet <- cv.gcdnet(x, y, nfolds=10, lambda2=0.95, standardize=TRUE)
+          fit_gcdnet <- cv.gcdnet(x, y, nfolds = 10, lambda2 = 0.95, standardize = TRUE)
         }
-        lambda = fit_gcdnet$lambda.1se
-        coef = coef(fit_gcdnet, s = "lambda.1se")
-        if(any(row.names(coef)=='(Intercept)')){
-          pf=as.vector(pmax(abs(coef), .Machine$double.eps)^(-1))[-1]
-        } else{
-          pf=as.vector(pmax(abs(coef), .Machine$double.eps)^(-1))
+        lambda <- fit_gcdnet$lambda.1se
+        coef <- coef(fit_gcdnet, s = "lambda.1se")
+        if (any(row.names(coef) == "(Intercept)")) {
+          pf <- as.vector(pmax(abs(coef), .Machine$double.eps)^(-1))[-1]
+        } else {
+          pf <- as.vector(pmax(abs(coef), .Machine$double.eps)^(-1))
         }
-      }
-    }} else {
-      if (family != 'cox') {
-        fit = cv.ncvreg(x, y, family = family, penalty = penalty)
-        cv.1se.ind = min(which(fit$cve<fit$cve[fit$min]+fit$cvse[fit$min]))
-        coef = fit$fit$beta[, cv.1se.ind]  # extract coefficients at a single value of lambda, including the intercept
-        coef <- data.frame(coef)
-      } else {
-        fit = ncvreg::cv.ncvsurv(x, y, family = family, penalty = penalty)
-        cv.1se.ind = min(which(fit$cve<fit$cve[fit$min]+fit$cvse[fit$min]))
-        coef = fit$fit$beta[, cv.1se.ind]
-        coef <- data.frame(coef)
       }
     }
-  
-  
+  } else {
+    if (family != "cox") {
+      fit <- cv.ncvreg(x, y, family = family, penalty = penalty)
+      cv.1se.ind <- min(which(fit$cve < fit$cve[fit$min] + fit$cvse[fit$min]))
+      coef <- fit$fit$beta[, cv.1se.ind] # extract coefficients at a single value of lambda, including the intercept
+      coef <- data.frame(coef)
+    } else {
+      fit <- ncvreg::cv.ncvsurv(x, y, family = family, penalty = penalty)
+      cv.1se.ind <- min(which(fit$cve < fit$cve[fit$min] + fit$cvse[fit$min]))
+      coef <- fit$fit$beta[, cv.1se.ind]
+      coef <- data.frame(coef)
+    }
+  }
+
+
   ci_low <- ci_up <- bootstrap <- c()
   count <- 0
   k <- 0
-  message('Getting bootstrap confidence intervals')
-  
+  message("Getting bootstrap confidence intervals")
+
   repeat{
-    for(j in 1:10){
+    for (j in 1:10) {
       p <- ncol(x)
       n <- nrow(x)
-      boot <- foreach (i=1:200, .combine='cbind') %dopar% {
-        if(exists(".Random.seed")){
-          rm(.Random.seed, envir=globalenv())
+      boot <- foreach(i = 1:200, .combine = "cbind") %dopar% {
+        if (exists(".Random.seed")) {
+          rm(.Random.seed, envir = globalenv())
         }
-        ind <- sample(1:n, replace=TRUE)
-        if (penalty=='lasso'){
-          fit.i <- glmnet(x[ind,], y[ind], family=family, lambda=lambda, parallel=parallel)
-          b = coef(fit.i) 
+        ind <- sample(1:n, replace = TRUE)
+        if (penalty == "lasso") {
+          fit.i <- glmnet(x[ind, ], y[ind], family = family, lambda = lambda, parallel = parallel)
+          b <- coef(fit.i)
           b
-        } else if (penalty=='enet'){
-          fit.i <- glmnet(x[ind,], y[ind], alpha=0.05, family=family, lambda=lambda, parallel=parallel)
-          b = coef(fit.i)
+        } else if (penalty == "enet") {
+          fit.i <- glmnet(x[ind, ], y[ind], alpha = 0.05, family = family, lambda = lambda, parallel = parallel)
+          b <- coef(fit.i)
           b
-        } else if (penalty=='msaenet'){
-          fit.i = aenet(x[ind,], y[ind], family = family, init = "ridge", alphas = 0.05,
-                        rule = "lambda.1se", parallel = parallel, verbose = TRUE, penalty.factor.init=(pmax(abs(coef.aenet), .Machine$double.eps))^(-1))
-          b = fit.i[['beta']]
+        } else if (penalty == "msaenet") {
+          fit.i <- aenet(x[ind, ], y[ind],
+            family = family, init = "ridge", alphas = 0.05,
+            rule = "lambda.1se", parallel = parallel, verbose = TRUE, penalty.factor.init = (pmax(abs(coef.aenet), .Machine$double.eps))^(-1)
+          )
+          b <- fit.i[["beta"]]
           b
-        } else if (penalty=='aenet'){
-          if (family=='cox'){
-            fit.i <- try(Coxnet(x[ind,], y[ind], penalty = "Enet", alpha = 0.05, lambda = lambda, nfolds = 10,
-                                inzero = FALSE, adaptive = c(TRUE, FALSE), aini=list(wbeta=(pmax(abs(as.numeric(coef.aenet)), .Machine$double.eps))^(-1))))
-            while(class(fit.i)=="try-error"){
-              print('try')
-              ind <- sample(1:n, replace=TRUE)
-              fit.i <- try(Coxnet(x[ind,], y[ind], penalty = "Enet", alpha = 0.05, lambda = lambda, nfolds = 10,
-                                  inzero = FALSE, adaptive = c(TRUE, FALSE), aini=list(wbeta=(pmax(abs(as.numeric(coef.aenet)), .Machine$double.eps))^(-1))))
+        } else if (penalty == "aenet") {
+          if (family == "cox") {
+            fit.i <- try(Coxnet(x[ind, ], y[ind],
+              penalty = "Enet", alpha = 0.05, lambda = lambda, nfolds = 10,
+              inzero = FALSE, adaptive = c(TRUE, FALSE), aini = list(wbeta = (pmax(abs(as.numeric(coef.aenet)), .Machine$double.eps))^(-1))
+            ))
+            while (class(fit.i) == "try-error") {
+              print("try")
+              ind <- sample(1:n, replace = TRUE)
+              fit.i <- try(Coxnet(x[ind, ], y[ind],
+                penalty = "Enet", alpha = 0.05, lambda = lambda, nfolds = 10,
+                inzero = FALSE, adaptive = c(TRUE, FALSE), aini = list(wbeta = (pmax(abs(as.numeric(coef.aenet)), .Machine$double.eps))^(-1))
+              ))
             }
-            b = as(as.matrix(fit.i[['Beta']]), "dgCMatrix")
+            b <- as(as.matrix(fit.i[["Beta"]]), "dgCMatrix")
             b
           } else {
-            if (family=='gaussian'){
-              fit.i <- gcdnet(x[ind,], y[ind], lambda=lambda, lambda2=0.95, pf=pf, standardize=TRUE, method='ls')
+            if (family == "gaussian") {
+              fit.i <- gcdnet(x[ind, ], y[ind], lambda = lambda, lambda2 = 0.95, pf = pf, standardize = TRUE, method = "ls")
             } else {
-              fit.i <- gcdnet(x[ind,], y[ind], lambda=lambda, lambda2=0.95, pf=pf, standardize=TRUE)
+              fit.i <- gcdnet(x[ind, ], y[ind], lambda = lambda, lambda2 = 0.95, pf = pf, standardize = TRUE)
             }
-            b = coef(fit.i)
+            b <- coef(fit.i)
             b
-          }} else{
-            if (family != 'cox') {
-              fit = cv.ncvreg(x[ind,], y[ind], family = family, penalty = penalty)
-              cv.1se.ind = min(which(fit$cve<fit$cve[fit$min]+fit$cvse[fit$min]))
-              b = fit$fit$beta[, cv.1se.ind]  # extract coefficients at a single value of lambda, including the intercept
-              b
-            } else {
-              fit = ncvreg::cv.ncvsurv(x[ind,], y[ind], family = family, penalty = penalty)
-              cv.1se.ind = min(which(fit$cve<fit$cve[fit$min]+fit$cvse[fit$min]))
-              b = fit$fit$beta[, cv.1se.ind]  # extract coefficients at a single value of lambda
-              b
-            }
           }
+        } else {
+          if (family != "cox") {
+            fit <- cv.ncvreg(x[ind, ], y[ind], family = family, penalty = penalty)
+            cv.1se.ind <- min(which(fit$cve < fit$cve[fit$min] + fit$cvse[fit$min]))
+            b <- fit$fit$beta[, cv.1se.ind] # extract coefficients at a single value of lambda, including the intercept
+            b
+          } else {
+            fit <- ncvreg::cv.ncvsurv(x[ind, ], y[ind], family = family, penalty = penalty)
+            cv.1se.ind <- min(which(fit$cve < fit$cve[fit$min] + fit$cvse[fit$min]))
+            b <- fit$fit$beta[, cv.1se.ind] # extract coefficients at a single value of lambda
+            b
+          }
+        }
       }
-      
-      out <- as.data.frame(t(apply(boot, 1, quantile, probs=c(sig/2, 1-sig/2))))
-      out[which(is.na(out[,1])),1] <- 0
-      out[which(is.na(out[,2])),2] <- 0
-      colnames(out) <- c('Lower', 'Upper')
-      ci_low <- cbind(ci_low, out[,1])
-      ci_up <- cbind(ci_up, out[,2])
+
+      out <- as.data.frame(t(apply(boot, 1, quantile, probs = c(sig / 2, 1 - sig / 2))))
+      out[which(is.na(out[, 1])), 1] <- 0
+      out[which(is.na(out[, 2])), 2] <- 0
+      colnames(out) <- c("Lower", "Upper")
+      ci_low <- cbind(ci_low, out[, 1])
+      ci_up <- cbind(ci_up, out[, 2])
       bootstrap <- cbind(bootstrap, boot)
       count <- count + 1
     }
     k <- k + 10
-    message('Number of bootstrap repetition block:')
+    message("Number of bootstrap repetition block:")
     print(k)
-    if (length(which((apply(ci_low, 1, function(x) sd(x)/sqrt(k)) > 0.05*apply(abs(as.matrix(ci_up) - as.matrix(ci_low)), 1, mean)) | (apply(ci_up, 1, function(x) sd(x)/sqrt(k)) > 0.05*apply(abs(as.matrix(ci_low) - as.matrix(ci_up)), 1, mean))))<0.05*dim(x)[2]){
+    if (length(which((apply(ci_low, 1, function(x) sd(x) / sqrt(k)) > 0.05 * apply(abs(as.matrix(ci_up) - as.matrix(ci_low)), 1, mean)) | (apply(ci_up, 1, function(x) sd(x) / sqrt(k)) > 0.05 * apply(abs(as.matrix(ci_low) - as.matrix(ci_up)), 1, mean)))) < 0.05 * dim(x)[2]) {
       break
-    }}
-  
-  out <- as.data.frame(t(apply(bootstrap, 1, quantile, probs=c(sig/2, 1-sig/2))))
-  if(!is.null(colnames(x))){
-    if(any(rownames(out)=='(Intercept)')){
-      out <- cbind(c('(Intercept)', colnames(x)), out)
+    }
+  }
+
+  out <- as.data.frame(t(apply(bootstrap, 1, quantile, probs = c(sig / 2, 1 - sig / 2))))
+  if (!is.null(colnames(x))) {
+    if (any(rownames(out) == "(Intercept)")) {
+      out <- cbind(c("(Intercept)", colnames(x)), out)
     } else {
       out <- cbind(colnames(x), out)
     }
-  } else{
+  } else {
     out <- cbind(row.names(out), out)
   }
-  colnames(out) <- c('var', 'CI_low', 'CI_up')
-  coef <- data.frame(rownames(coef), coef[,1])
-  colnames(coef) <- c('var', 'coef')
-  out <- merge(coef, out, by='var')
-  
-  if(family=='cox' | family=='binomial'){
+  colnames(out) <- c("var", "CI_low", "CI_up")
+  coef <- data.frame(rownames(coef), coef[, 1])
+  colnames(coef) <- c("var", "coef")
+  out <- merge(coef, out, by = "var")
+
+  if (family == "cox" | family == "binomial") {
     percentiles <- cbind(rep(NA, dim(out)[1]), rep(NA, dim(out)[1]))
-    percentiles[which(as.character(out$var)!='(Intercept)'),] <- t(apply(x[,as.character(out$var)[which(as.character(out$var)!='(Intercept)')]], 2, function(x) quantile(x, probs=probs)))
+    percentiles[which(as.character(out$var) != "(Intercept)"), ] <- t(apply(x[, as.character(out$var)[which(as.character(out$var) != "(Intercept)")]], 2, function(x) quantile(x, probs = probs)))
     out$CI_up_perc <- out$CI_low_perc <- out$Est <- rep(NA, dim(out)[1])
-    out$Est[which(as.character(out$var)!='(Intercept)')] <- exp((percentiles[which(as.character(out$var)!='(Intercept)'),2] - percentiles[which(as.character(out$var)!='(Intercept)'),1])*as.numeric(as.character(out$coef[!(as.character(out$var)=='(Intercept)')])))
-    out$CI_low_perc[which(as.character(out$var)!='(Intercept)')] <- exp((percentiles[which(as.character(out$var)!='(Intercept)'),2] - percentiles[which(as.character(out$var)!='(Intercept)'),1])*as.numeric(as.character(out$CI_low[which(as.character(out$var)!='(Intercept)')])))
-    out$CI_up_perc[which(as.character(out$var)!='(Intercept)')] <- exp((percentiles[which(as.character(out$var)!='(Intercept)'),2] - percentiles[which(as.character(out$var)!='(Intercept)'),1])*as.numeric(as.character(out$CI_up[which(as.character(out$var)!='(Intercept)')])))
-    if(!is.null(covars)){
-      for (i in covars){
-        out[which(as.character(out$var)==i),'Est'] <- exp(as.numeric(out[which(as.character(out$var)==i), 'coef']))
-        out[which(as.character(out$var)==i),'CI_low_perc'] <- exp(as.numeric(out[which(as.character(out$var)==i), 'CI_low']))
-        out[which(as.character(out$var)==i),'CI_up_perc'] <- exp(as.numeric(out[which(as.character(out$var)==i), 'CI_up']))
+    out$Est[which(as.character(out$var) != "(Intercept)")] <- exp((percentiles[which(as.character(out$var) != "(Intercept)"), 2] - percentiles[which(as.character(out$var) != "(Intercept)"), 1]) * as.numeric(as.character(out$coef[!(as.character(out$var) == "(Intercept)")])))
+    out$CI_low_perc[which(as.character(out$var) != "(Intercept)")] <- exp((percentiles[which(as.character(out$var) != "(Intercept)"), 2] - percentiles[which(as.character(out$var) != "(Intercept)"), 1]) * as.numeric(as.character(out$CI_low[which(as.character(out$var) != "(Intercept)")])))
+    out$CI_up_perc[which(as.character(out$var) != "(Intercept)")] <- exp((percentiles[which(as.character(out$var) != "(Intercept)"), 2] - percentiles[which(as.character(out$var) != "(Intercept)"), 1]) * as.numeric(as.character(out$CI_up[which(as.character(out$var) != "(Intercept)")])))
+    if (!is.null(covars)) {
+      for (i in covars) {
+        out[which(as.character(out$var) == i), "Est"] <- exp(as.numeric(out[which(as.character(out$var) == i), "coef"]))
+        out[which(as.character(out$var) == i), "CI_low_perc"] <- exp(as.numeric(out[which(as.character(out$var) == i), "CI_low"]))
+        out[which(as.character(out$var) == i), "CI_up_perc"] <- exp(as.numeric(out[which(as.character(out$var) == i), "CI_up"]))
       }
     }
-  } else if (family=='gaussian'){
+  } else if (family == "gaussian") {
     percentiles <- cbind(rep(NA, dim(out)[1]), rep(NA, dim(out)[1]))
-    percentiles[which(as.character(out$var)!='(Intercept)'),] <- t(apply(x[,as.character(out$var)[which(as.character(out$var)!='(Intercept)')]], 2, function(x) quantile(x, probs=probs)))
+    percentiles[which(as.character(out$var) != "(Intercept)"), ] <- t(apply(x[, as.character(out$var)[which(as.character(out$var) != "(Intercept)")]], 2, function(x) quantile(x, probs = probs)))
     out$CI_up_perc <- out$CI_low_perc <- out$Est <- rep(NA, dim(out)[1])
-    out$Est[which(as.character(out$var)!='(Intercept)')] <- (percentiles[which(as.character(out$var)!='(Intercept)'),2] - percentiles[which(as.character(out$var)!='(Intercept)'),1])*as.numeric(as.character(out$coef[!(as.character(out$var)=='(Intercept)')]))
-    out$CI_low_perc[which(as.character(out$var)!='(Intercept)')] <- (percentiles[which(as.character(out$var)!='(Intercept)'),2] - percentiles[which(as.character(out$var)!='(Intercept)'),1])*as.numeric(as.character(out$CI_low[which(as.character(out$var)!='(Intercept)')]))
-    out$CI_up_perc[which(as.character(out$var)!='(Intercept)')] <- (percentiles[which(as.character(out$var)!='(Intercept)'),2] - percentiles[which(as.character(out$var)!='(Intercept)'),1])*as.numeric(as.character(out$CI_up[which(as.character(out$var)!='(Intercept)')]))
-    if(!is.null(covars)){
-      for (i in covars){
-        out[which(as.character(out$var)==i),'Est'] <- as.numeric(out[which(as.character(out$var)==i), 'coef'])
-        out[which(as.character(out$var)==i),'CI_low_perc'] <- as.numeric(out[which(as.character(out$var)==i), 'CI_low'])
-        out[which(as.character(out$var)==i),'CI_up_perc'] <- as.numeric(out[which(as.character(out$var)==i), 'CI_up'])
+    out$Est[which(as.character(out$var) != "(Intercept)")] <- (percentiles[which(as.character(out$var) != "(Intercept)"), 2] - percentiles[which(as.character(out$var) != "(Intercept)"), 1]) * as.numeric(as.character(out$coef[!(as.character(out$var) == "(Intercept)")]))
+    out$CI_low_perc[which(as.character(out$var) != "(Intercept)")] <- (percentiles[which(as.character(out$var) != "(Intercept)"), 2] - percentiles[which(as.character(out$var) != "(Intercept)"), 1]) * as.numeric(as.character(out$CI_low[which(as.character(out$var) != "(Intercept)")]))
+    out$CI_up_perc[which(as.character(out$var) != "(Intercept)")] <- (percentiles[which(as.character(out$var) != "(Intercept)"), 2] - percentiles[which(as.character(out$var) != "(Intercept)"), 1]) * as.numeric(as.character(out$CI_up[which(as.character(out$var) != "(Intercept)")]))
+    if (!is.null(covars)) {
+      for (i in covars) {
+        out[which(as.character(out$var) == i), "Est"] <- as.numeric(out[which(as.character(out$var) == i), "coef"])
+        out[which(as.character(out$var) == i), "CI_low_perc"] <- as.numeric(out[which(as.character(out$var) == i), "CI_low"])
+        out[which(as.character(out$var) == i), "CI_up_perc"] <- as.numeric(out[which(as.character(out$var) == i), "CI_up"])
       }
     }
   }
-  return(cis=out)
+  return(cis = out)
 }

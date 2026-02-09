@@ -70,7 +70,7 @@
 #' cholmat <- chol(corrmat)
 #' x <- matrix(rnorm(n * p, mean = 0, sd = 1), n, p)
 #' x <- x %*% cholmat
-#' colnames(x) <- unlist(lapply(seq(1:dim(x)[2]), function(y) paste0('V',y)))
+#' colnames(x) <- unlist(lapply(seq(1:dim(x)[2]), function(y) paste0("V", y)))
 #' testX <- matrix(rnorm(10 * p, mean = 0, sd = 1), nrow = 10, ncol = p)
 #'
 #' # gaussian response
@@ -102,9 +102,10 @@
 #' b <- c(0.6, 0.6, 0.6, -0.9 * sqrt(2))
 #' myrates <- exp(x[, 1:4] %*% b)
 #' y <- rpois(n, myrates)
-#' model3 <- SIS(x, y, 
-#' family = "poisson", penalty = "lasso", tune = "bic", 
-#' varISIS = "aggr", seed = 31)
+#' model3 <- SIS(x, y,
+#'   family = "poisson", penalty = "lasso", tune = "bic",
+#'   varISIS = "aggr", seed = 31
+#' )
 #'
 #' predict(model3, testX, type = "response")
 #' predict(model3, testX, type = "link")

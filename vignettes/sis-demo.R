@@ -15,26 +15,28 @@ library(SIS)
 
 ## ---- tidy=TRUE, tidy.opts=list(width.cutoff=70)------------------------------
 set.seed(0)
-n = 400; p = 50; rho = 0.5
-corrmat = diag(rep(1-rho, p)) + matrix(rho, p, p)
-corrmat[,4] = sqrt(rho)
-corrmat[4, ] = sqrt(rho)
-corrmat[4,4] = 1
-corrmat[,5] = 0
-corrmat[5, ] = 0
-corrmat[5,5] = 1
-cholmat = chol(corrmat)
-x = matrix(rnorm(n*p, mean=0, sd=1), n, p)
-x = x%*%cholmat
+n <- 400
+p <- 50
+rho <- 0.5
+corrmat <- diag(rep(1 - rho, p)) + matrix(rho, p, p)
+corrmat[, 4] <- sqrt(rho)
+corrmat[4, ] <- sqrt(rho)
+corrmat[4, 4] <- 1
+corrmat[, 5] <- 0
+corrmat[5, ] <- 0
+corrmat[5, 5] <- 1
+cholmat <- chol(corrmat)
+x <- matrix(rnorm(n * p, mean = 0, sd = 1), n, p)
+x <- x %*% cholmat
 
-# gaussian response 
+# gaussian response
 set.seed(1)
-b = c(4,4,4,-6*sqrt(2),4/3)
-y=x[, 1:5]%*%b + rnorm(n)
+b <- c(4, 4, 4, -6 * sqrt(2), 4 / 3)
+y <- x[, 1:5] %*% b + rnorm(n)
 
 ## ---- tidy=TRUE, tidy.opts=list(width.cutoff=70)------------------------------
 # SIS without regularization
-model10 = SIS(x, y, family='gaussian', iter = FALSE)
+model10 <- SIS(x, y, family = "gaussian", iter = FALSE)
 
 # Getting the final selected variables after regularization step
 model10$ix
@@ -47,7 +49,7 @@ model10$ix0[1:10]
 
 ## ---- tidy=TRUE, tidy.opts=list(width.cutoff=70)------------------------------
 # SIS with regularization
-model11 = SIS(x, y, family='gaussian', penalty = 'SCAD', iter = TRUE)
+model11 <- SIS(x, y, family = "gaussian", penalty = "SCAD", iter = TRUE)
 
 # Getting the final selected variables
 model10$ix
@@ -56,7 +58,9 @@ model10$ix
 model11$ix0[1:10]
 
 # The top 10 ranked variables for each screening step
-lapply(model11$ix_list,f<-function(x){x[1:10]})
+lapply(model11$ix_list, f <- function(x) {
+  x[1:10]
+})
 
 ## ---- tidy=TRUE, tidy.opts=list(width.cutoff=70)------------------------------
 set.seed(2)
@@ -72,7 +76,9 @@ model21$ix
 model11$ix0[1:10]
 
 # The top 10 ranked variables for each screening step
-lapply(model11$ix_list,f<-function(x){x[1:10]})
+lapply(model11$ix_list, f <- function(x) {
+  x[1:10]
+})
 
 ## ---- tidy=TRUE, tidy.opts=list(width.cutoff=70)------------------------------
 set.seed(4)
@@ -96,10 +102,10 @@ model42$ix
 
 ## ---- tidy=TRUE, tidy.opts=list(width.cutoff=70)------------------------------
 y <- as.factor(iris$Species)
-noise <- matrix(rnorm(nrow(iris)*200),nrow(iris),200)
-x <- cbind(as.matrix(iris[,-5]),noise)
+noise <- matrix(rnorm(nrow(iris) * 200), nrow(iris), 200)
+x <- cbind(as.matrix(iris[, -5]), noise)
 
-model21 <- SIS(x, y, family = "multinom", penalty = 'lasso')
+model21 <- SIS(x, y, family = "multinom", penalty = "lasso")
 
 # Getting the final selected variables
 model21$ix
@@ -108,5 +114,6 @@ model21$ix
 model21$ix0[1:10]
 
 # The top 10 ranked variables for each screening step
-lapply(model21$ix_list,f<-function(x){x[1:10]})
-
+lapply(model21$ix_list, f <- function(x) {
+  x[1:10]
+})
